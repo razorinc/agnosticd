@@ -236,7 +236,7 @@ instances:
 # Security groups and associated rules. This will be provided
 # when the Heat template is generated separate groups and rules
 security_groups:
-  - name: master_sg
+  - name: rhvh_sg
     description: Security group for RHV hypervisor and bootstrap
     rules:
     - protocol: icmp

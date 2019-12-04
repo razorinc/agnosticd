@@ -229,7 +229,6 @@ instances:
     networks:
       - rhv
       - gluster
-      - external
     security_groups:
       - rhvh_sg
 

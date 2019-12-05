@@ -144,11 +144,11 @@ wait_for_dns: true
 
 # Set this to true if you want a FIPs provisioned for an RHV on OpenStack install
 # This will provision an API and Ingress FIP
-RHV_fip_provision: True
+rhv_fip_provision: True
 
 # This requires DDNS or other DNS solution configured
 # If enabled, it will add DNS entries for the API and Ingress FIPs
-RHV_fip_dns: True
+rhv_fip_dns: True
 
 # Quotas to set for new project that is created
 # 5 x 32 GB with 8 cores and 50+250 GB

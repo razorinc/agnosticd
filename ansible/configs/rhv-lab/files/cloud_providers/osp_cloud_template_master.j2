@@ -136,21 +136,22 @@ resources:
       {% endfor %}
     {% endif %}
     depends_on:
+    {%for network in networks | selectattr("create_router") -%}
       - {{ network | default('default') }}-router_private_interface
       {% endfor %} 
 
     {% if instance.floating_ip | default(false) or instance.public_dns | default(false) %}
-  fip_{{ iname }}:
+  fip_{{ iname }}_{{instance['networks'][0]}}:
     type: OS::Neutron::FloatingIP
     properties:
       floating_network: {{ provider_network }}
     depends_on:
-      - {{ instance['network'] | default('default') }}-router_private_interface
+      - {{ instance['networks'][0] | default('default') }}-router_private_interface
 
-  fip_association_{{ iname }}:
+  fip_association_{{ iname }}_{{ instance['networks'][0] }}:
     type: OS::Neutron::FloatingIPAssociation
     properties:
-      floatingip_id: {get_resource: fip_{{ iname }}}
+      floatingip_id: {get_resource: fip_{{ iname }}_{{instance["networks"][0]}}
       port_id: {get_resource: port_{{ iname }}}
     {% endif %}
 

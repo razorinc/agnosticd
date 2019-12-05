@@ -231,6 +231,27 @@ instances:
       - gluster
     security_groups:
       - rhvh_sg
+  - name: rhvh-test
+    count: 1
+    unique: yes
+    alt_name: rhv-hypervisor-test
+    image_id: "{{ rhvh_instance_image }}"
+    floating_ip: yes
+    flavor:
+      osp: "{{ rhvh_instance_type }}"
+    metadata:
+      - AnsibleGroup: "rhvh"
+      - function: rhvh
+      - user: jo
+      - project: "{{ project_tag }}"
+      - ostype: linux
+      - Purpose: "{{ purpose }}"
+    rootfs_size: 50
+    networks:
+      - gluster
+      - public
+    security_groups:
+      - rhvh_sg
 
 # Security groups and associated rules. This will be provided
 # when the Heat template is generated separate groups and rules

@@ -15,7 +15,9 @@
   tasks:
     - name: Create DNS entries for OpenShift FIPs
       debug:
-        msg: Currently using {{ osp_cluster_dns_zone }} on server {{ osp_cluster_dns_server }}
+        msg: >-
+          Currently using {{ osp_cluster_dns_zone }}
+          on server {{ osp_cluster_dns_server }}
       when: openshift_fip_provision
 
     - set_fact:

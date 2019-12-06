@@ -200,7 +200,7 @@ networks:
     create_router: true
 
 # These will influence the rhvh if it is being deployed
-rhvh_instance_type: rhv-hypervisor
+rhvh_instance_type: 4c16g30d
 rhvh_instance_image: rhel-guest-7.7u2
 
 # Instances to be provisioned in new project

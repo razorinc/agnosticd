@@ -187,15 +187,15 @@ networks:
     gateway_ip: 192.168.47.1
     allocation_start: 192.168.47.10
     allocation_end: 192.168.47.254
-    dns_nameservers: []
+    dns_nameservers: [8.8.8.8]
     create_router: true
 # Another example network if you need more than one deployed
   - name: gluster
     shared: "false"
-    subnet_cidr: 192.48.0.0/24
-    gateway_ip: 192.48.0.1
-    allocation_start: 192.48.0.25
-    allocation_end: 192.48.0.156
+    subnet_cidr: 192.168.48.0/24
+    gateway_ip: 192.168.48.1
+    allocation_start: 192.168.48.10
+    allocation_end: 192.168.48.254
     dns_nameservers: []
     create_router: true
 
@@ -210,12 +210,37 @@ rhvh_instance_image: rhel-guest-7.7u2
 # Metadata in OpenStack is equivelent to tags in AWS
 # These instances will be created with Cinder persistent volumes
 instances:
+  - name: rhvh-bastion
+    count: 1
+    unique: yes
+    alt_name: rhv-hypervisor-bastion
+    image_id: "{{ rhvh_instance_image }}"
+    floating_ip: yes
+    flavor:
+      osp: "{{ rhvh_instance_type }}"
+    metadata:
+      - AnsibleGroup: "bastions"
+      - function: rhvh
+      - user: jo
+      - project: "{{ project_tag }}"
+      - ostype: linux
+      - Purpose: "{{ purpose }}"
+    rootfs_size: 50
+    networks:
+      - rhv
+      - gluster
+    volumes:
+      - volume_name: gluster
+        volume_size: 50
+    port_security: false
+#    security_groups:
+#      - rhvh_sg
   - name: rhvh
-    count: 3
+    count: 2
     unique: yes
     alt_name: rhv-hypervisor
     image_id: "{{ rhvh_instance_image }}"
-    floating_ip: yes
+    floating_ip: false
     flavor:
       osp: "{{ rhvh_instance_type }}"
     metadata:
@@ -229,29 +254,12 @@ instances:
     networks:
       - rhv
       - gluster
-    security_groups:
-      - rhvh_sg
-  - name: rhvh-test
-    count: 1
-    unique: yes
-    alt_name: rhv-hypervisor-test
-    image_id: "{{ rhvh_instance_image }}"
-    floating_ip: yes
-    flavor:
-      osp: "{{ rhvh_instance_type }}"
-    metadata:
-      - AnsibleGroup: "rhvh"
-      - function: rhvh
-      - user: jo
-      - project: "{{ project_tag }}"
-      - ostype: linux
-      - Purpose: "{{ purpose }}"
-    rootfs_size: 50
-    networks:
-      - gluster
-      - public
-    security_groups:
-      - rhvh_sg
+    volumes:
+      - volume_name: gluster
+        volume_size: 50
+    port_security: false
+#    security_groups:
+#      - rhvh_sg
 
 # Security groups and associated rules. This will be provided
 # when the Heat template is generated separate groups and rules

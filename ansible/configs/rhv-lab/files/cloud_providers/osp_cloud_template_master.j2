@@ -15,6 +15,9 @@ resources:
       name: {{ guid }}-infra_key
       save_private_key: true
 
+  #############
+  # Project   #
+  #############
 {% if osp_project_create | bool %}
   {{ guid }}-project_user:
     type: OS::Keystone::User
@@ -118,7 +121,7 @@ resources:
 {% endfor %}
 
   #############
-  # Instances #
+  # Ports     #
   #############
 {% for instance in instances %}
   {% for myinstanceindex in range(instance.count|int) %}
@@ -129,17 +132,24 @@ resources:
     type: OS::Neutron::Port
     properties:
       network: { get_resource: {{ network | default('default') }}-network }
-      security_groups:
+    {% if instance.port_security is defined %}
+      port_security_enabled: {{ instance.port_security }}
+    {% endif %}
     {% if instance.security_groups is defined %}
+#      security_groups:
       {% for security_group in instance.security_groups %}
-        - {get_resource: {{ security_group }}}
+         - {get_resource: {{ security_group }}}
       {% endfor %}
     {% endif %}
     depends_on:
-    {%for network in networks | selectattr("create_router") -%}
-      - {{ network | default('default') }}-router_private_interface
+      {%for network in networks | selectattr("create_router") %}
+      - {{ network.name | default('default') }}-router_private_interface
+      {% endfor %} 
       {% endfor %} 
 
+  ###############
+  # FloatingIPs #
+  ###############
     {% if instance.floating_ip | default(false) or instance.public_dns | default(false) %}
   fip_{{ iname }}_{{instance['networks'][0]}}:
     type: OS::Neutron::FloatingIP
@@ -151,33 +161,44 @@ resources:
   fip_association_{{ iname }}_{{ instance['networks'][0] }}:
     type: OS::Neutron::FloatingIPAssociation
     properties:
-      floatingip_id: {get_resource: fip_{{ iname }}_{{instance["networks"][0]}}
-      port_id: {get_resource: port_{{ iname }}}
+      floatingip_id: {get_resource: fip_{{ iname }}_{{instance["networks"][0]}}}
+      port_id: {get_resource: port_{{ iname }}_{{instance["networks"][0]}}}
     {% endif %}
 
+  #############
+  # Instances #
+  #############
   server_{{ iname }}:
     type: OS::Nova::Server
     properties:
       name: {{ iname }}
       flavor: {{ instance.flavor.osp }}
       key_name: {get_resource: {{ guid }}-infra_key}
-
       block_device_mapping_v2:
         - image: {{ instance.image_id }}
           delete_on_termination: true
           volume_size: {{ instance['rootfs_size'] | default(osp_default_rootfs_size) }}
           boot_index: 0
-
       user_data: |
         #cloud-config
         ssh_authorized_keys: {{ all_ssh_authorized_keys | to_json }}
+        runcmd:
+          - sed -i -e '/^#PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
+          - sed -i -e '/^PermitRootLogin/s/^.*$/PermitRootLogin no/' /etc/ssh/sshd_config
+          - sed -i -e '/^#UseDNS/s/^.*$/UseDNS no/' /etc/ssh/sshd_config
+          - sed -i -e '/^UseDNS/s/^.*$/UseDNS no/' /etc/ssh/sshd_config
+          - restart ssh
+          - echo 'GATEWAYDEV=eth0' >> /etc/sysconfig/network
+          - sed -i -e '/^GATEWAYDEV/s/^.*$/GATEWAYDEV=eth0/' /etc/sysconfig/network
+          - ip route del 0.0.0.0/0 dev eth1
       user_data_format: RAW
       networks:
-        - port: {get_resource: port_{{ iname }}}
+{% for network in instance.networks %}
+        - port: {get_resource: port_{{ iname }}_{{network}}}
+{% endfor %}
     {% if instance['metadata'] is defined %}
       metadata: {{ instance.metadata | combine(default_metadata) | to_json }}
     {% endif %}
-
     {% if instance.tags is defined %}
       # Convert EC2 tags
       metadata:
@@ -188,15 +209,32 @@ resources:
         '{{ tag.key }}': {{ tag.value | to_json }}
       {% endfor %}
     {% endif %}
-
     depends_on:
-      - {{ instance['network'] | default('default') }}-router_private_interface
+      - {{ instance['networks'][0] | default('default') }}-router_private_interface
     {% if 'security_groups' in instance %}
       {% for security_group in instance.security_groups %}
       - {{ security_group }}
       {% endfor %}
     {% endif %}
 
+  ###################
+  # additional FIPs #
+  ###################
+{% if rhv_fip_provision %}
+  rhv_api_fip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: "{{ provider_network }}"
+
+  rhv_ingress_fip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: "{{ provider_network }}"
+{% endif %}
+
+  #############
+  # Volumes   #
+  #############
     {% if instance.volumes is defined %}
   #### Volumes for {{ iname }} ####
       {% for volume in instance.volumes %}
@@ -225,3 +263,13 @@ outputs:
   {{ guid }}-infra_key:
     description: The SSH infra key
     value: {get_attr: [{{ guid }}-infra_key, private_key]}
+
+{% if rhv_fip_provision %}
+  rhv_api_fip:
+    description: The floating IP of the OpenShift API
+    value: { get_attr: [ rhv_api_fip, floating_ip_address ] }
+
+  rhv_ingress_fip:
+    description: The floating IP of the OpenShift ingress
+    value: { get_attr: [ rhv_ingress_fip, floating_ip_address ] }
+{% endif %}

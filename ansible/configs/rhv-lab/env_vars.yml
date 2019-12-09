@@ -142,13 +142,13 @@ wait_for_dns: true
 # ddns_key_name:
 # ddns_secret_name:
 
-# Set this to true if you want a FIPs provisioned for an RHV on OpenStack install
+# Set this to true if you want FIPs provisioned for an RHV on OpenStack install
 # This will provision an API and Ingress FIP
-RHV_fip_provision: True
+rhv_fip_provision: True
 
 # This requires DDNS or other DNS solution configured
 # If enabled, it will add DNS entries for the API and Ingress FIPs
-RHV_fip_dns: True
+rhv_fip_dns: True
 
 # Quotas to set for new project that is created
 # 5 x 32 GB with 8 cores and 50+250 GB
@@ -187,20 +187,20 @@ networks:
     gateway_ip: 192.168.47.1
     allocation_start: 192.168.47.10
     allocation_end: 192.168.47.254
-    dns_nameservers: []
+    dns_nameservers: '["8.8.8.8"]'
     create_router: true
 # Another example network if you need more than one deployed
   - name: gluster
     shared: "false"
-    subnet_cidr: 192.48.0.0/24
-    gateway_ip: 192.48.0.1
-    allocation_start: 192.48.0.25
-    allocation_end: 192.48.0.156
+    subnet_cidr: 192.168.48.0/24
+    gateway_ip: 192.168.48.1
+    allocation_start: 192.168.48.10
+    allocation_end: 192.168.48.254
     dns_nameservers: []
     create_router: true
 
 # These will influence the rhvh if it is being deployed
-rhvh_instance_type: rhv-hypervisor
+rhvh_instance_type: 4c16g30d
 rhvh_instance_image: rhel-guest-7.7u2
 
 # Instances to be provisioned in new project
@@ -210,8 +210,33 @@ rhvh_instance_image: rhel-guest-7.7u2
 # Metadata in OpenStack is equivelent to tags in AWS
 # These instances will be created with Cinder persistent volumes
 instances:
+  - name: rhvh-bastion
+    count: 1
+    unique: yes
+    alt_name: rhv-hypervisor-bastion
+    image_id: "{{ rhvh_instance_image }}"
+    floating_ip: yes
+    flavor:
+      osp: "{{ rhvh_instance_type }}"
+    metadata:
+      - AnsibleGroup: "bastions"
+      - function: rhvh
+      - user: jo
+      - project: "{{ project_tag }}"
+      - ostype: linux
+      - Purpose: "{{ purpose }}"
+    rootfs_size: 50
+    networks:
+      - rhv
+      - gluster
+    volumes:
+      - volume_name: gluster
+        volume_size: 50
+    port_security: false
+#    security_groups:
+#      - rhvh_sg
   - name: rhvh
-    count: 3
+    count: 2
     unique: yes
     alt_name: rhv-hypervisor
     image_id: "{{ rhvh_instance_image }}"
@@ -229,9 +254,12 @@ instances:
     networks:
       - rhv
       - gluster
-      - external
-    security_groups:
-      - rhvh_sg
+    volumes:
+      - volume_name: gluster
+        volume_size: 50
+    port_security: false
+#    security_groups:
+#      - rhvh_sg
 
 # Security groups and associated rules. This will be provided
 # when the Heat template is generated separate groups and rules

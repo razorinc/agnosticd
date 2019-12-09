@@ -16,7 +16,8 @@
         record: "{{ _instance_name }}.{{ guid }}"
         type: A
         ttl: "{{ _infra_osp_dns_default_ttl }}"
-        value: "{{ r_osp_facts | json_query(find_ip_query) }}"
+        #value: "{{ r_osp_facts | json_query(find_ip_query) }}"
+        value: 52.116.95.17
         key_name: "{{ ddns_key_name }}"
         key_secret: "{{ ddns_key_secret }}"
 

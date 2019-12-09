@@ -142,7 +142,7 @@ wait_for_dns: true
 # ddns_key_name:
 # ddns_secret_name:
 
-# Set this to true if you want a FIPs provisioned for an RHV on OpenStack install
+# Set this to true if you want FIPs provisioned for an RHV on OpenStack install
 # This will provision an API and Ingress FIP
 rhv_fip_provision: True
 
@@ -187,7 +187,7 @@ networks:
     gateway_ip: 192.168.47.1
     allocation_start: 192.168.47.10
     allocation_end: 192.168.47.254
-    dns_nameservers: [8.8.8.8]
+    dns_nameservers: '["8.8.8.8"]'
     create_router: true
 # Another example network if you need more than one deployed
   - name: gluster
@@ -240,7 +240,7 @@ instances:
     unique: yes
     alt_name: rhv-hypervisor
     image_id: "{{ rhvh_instance_image }}"
-    floating_ip: false
+    floating_ip: yes
     flavor:
       osp: "{{ rhvh_instance_type }}"
     metadata:

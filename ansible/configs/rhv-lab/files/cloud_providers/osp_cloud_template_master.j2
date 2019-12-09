@@ -217,6 +217,21 @@ resources:
       {% endfor %}
     {% endif %}
 
+  ###################
+  # additional FIPs #
+  ###################
+{% if rhv_fip_provision %}
+  rhv_api_fip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: "{{ provider_network }}"
+
+  rhv_ingress_fip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: "{{ provider_network }}"
+{% endif %}
+
   #############
   # Volumes   #
   #############
@@ -248,3 +263,13 @@ outputs:
   {{ guid }}-infra_key:
     description: The SSH infra key
     value: {get_attr: [{{ guid }}-infra_key, private_key]}
+
+{% if rhv_fip_provision %}
+  rhv_api_fip:
+    description: The floating IP of the OpenShift API
+    value: { get_attr: [ rhv_api_fip, floating_ip_address ] }
+
+  rhv_ingress_fip:
+    description: The floating IP of the OpenShift ingress
+    value: { get_attr: [ rhv_ingress_fip, floating_ip_address ] }
+{% endif %}

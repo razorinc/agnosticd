@@ -2,11 +2,23 @@ clouds:
   {{ osp_project_name }}:
     auth:
       auth_url: "{{ osp_auth_url }}"
+{% if osp_project_create %}
       username: "{{ guid }}-user"
+{% else %}
+      username: "{{ osp_auth_username }}"
+{% endif %}
       project_name: "{{ osp_project_name }}"
+{% if osp_project_info is defined %}
       project_id: "{{ hostvars['localhost']['osp_project_info'][0].id }}"
+{% elif osp_project_id is defined %}
+      project_id: "{{ osp_project_id }}"
+{% endif %}
       user_domain_name: "Default"
+{% if osp_project_create %}
       password: "{{ hostvars['localhost']['heat_user_password'] }}"
+{% else %}
+      password: "{{ osp_auth_password }}"
+{% endif %}
     region_name: "regionOne"
     interface: "public"
     identity_api_version: 3

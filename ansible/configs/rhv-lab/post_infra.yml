@@ -15,25 +15,25 @@
   tasks:
     - name: Create DNS entries for OpenShift FIPs
       debug:
-        msg: Currently using {{ ocp_cluster_dns_zone }} on server {{ ocp_cluster_dns_server }}
-      when: openshift_fip_provision
+        msg: Currently using {{ osp_cluster_dns_zone }} on server {{ osp_cluster_dns_server }}
+      when: rhv_fip_provision
 
     - set_fact:
-        ocp_api_fip: "{{ hot_outputs | json_query(query) }}"
+        rhv_api_fip: "{{ hot_outputs | json_query(query) }}"
       vars:
-        query: "outputs[?@.output_key=='ocp_api_fip'].output_value|[0]"
-      when: openshift_fip_provision
+        query: "outputs[?@.output_key=='rhv_api_fip'].output_value|[0]"
+      when: rhv_fip_provision
 
     - set_fact:
-        ocp_ingress_fip: "{{ hot_outputs | json_query(query) }}"
+        rhv_ingress_fip: "{{ hot_outputs | json_query(query) }}"
       vars:
-        query: "outputs[?@.output_key=='ocp_ingress_fip'].output_value|[0]"
-      when: openshift_fip_provision
+        query: "outputs[?@.output_key=='rhv_ingress_fip'].output_value|[0]"
+      when: rhv_fip_provision
     
-    - name: Add DNS entry for OpenShift API and ingress
+    - name: Add DNS entry for RHV API and ingress
       nsupdate:
-        server: "{{ ocp_cluster_dns_server }}"
-        zone: "{{ ocp_cluster_dns_zone }}"
+        server: "{{ osp_cluster_dns_server }}"
+        zone: "{{ osp_cluster_dns_zone }}"
         record: "{{ item.dns }}.{{ guid }}"
         type: A
         ttl: 5
@@ -41,10 +41,10 @@
         key_name: "{{ ddns_key_name }}"
         key_secret: "{{ ddns_key_secret }}"
       loop:
-        - name: "{{ ocp_api_fip }}"
+        - name: "{{ rhv_api_fip }}"
           dns: "api"
-        - name: "{{ ocp_ingress_fip }}"
+        - name: "{{ rhv_ingress_fip }}"
           dns: "*.apps"
       loop_control:
         label: item.name
-      when: openshift_fip_provision
+      when: rhv_fip_provision

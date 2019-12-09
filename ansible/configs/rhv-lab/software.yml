@@ -6,13 +6,14 @@
   tasks:
     - when: cloud_provider == "osp"
       block:
+
         - name: Install packages for OpenStack CLI
           package:
             name:
               - gcc
               - python3
               - python3-devel
-        
+
         - name: Copy requirements.txt
           copy:
             src: "./files/openstack_requirements.txt"
@@ -21,15 +22,41 @@
         - name: Install python requirements for OpenStack CLI
           command: "pip3 install -r /root/requirements.txt"
 
+        - name: install python2 pip and openstacksdk
+          shell: |
+              wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+              yum -y install `ls *epel*.rpm`
+              yum install -y python-pip python-devel
+
+        - name: Install python requirements for OpenStack CLI
+          command: "pip install python-cinderclient python-glanceclient python-heatclient python-keystoneclient python-novaclient python-openstackclient python-swiftclient openstacksdk"
+
         - name: Remove requirements.txt
           file:
             path: "/root/requirements.txt"
             state: absent
-          
+
         - name: Add /usr/local/bin to PATH
           copy:
             dest: /etc/profile.d/custom-path.sh
             content: 'PATH=$PATH:/usr/local/bin'
+
+
+#        - when: osp_project_info is not defined
+#          block:
+#            - name: Get project info
+#              # This changes to os_project_info in Ansible 2.9
+#              os_project_facts:
+#                name: "{{ osp_project_name }}"
+#              register: r_osp_project
+#
+#            - set_fact:
+#                osp_project_info: "{{ r_osp_project.ansible_facts.openstack_projects }}"
+#
+#            - when: osp_project_info | length == 0
+#              fail:
+#                msg: No project '{{ osp_project_info }}' found
+
 
         - name: Create .config directory
           file:
@@ -45,33 +72,33 @@
             dest: "/home/{{ student_name }}/.config/openstack/clouds.yaml"
             owner: "{{ student_name }}"
             mode: 0700
-          
+
         - name: Add environment variables for API and Ingress FIPs
           lineinfile:
             path: "/home/{{ student_name }}/.bashrc"
             regexp: "^export {{ item.env_var }}"
             line: "export {{ item.env_var }}={{ item.ip }}"
           loop:
-            - ip: "{{ hostvars['localhost']['ocp_api_fip'] }}"
+            - ip: "{{ hostvars['localhost']['rhv_api_fip'] }}"
               env_var: "API_FIP"
-            - ip: "{{ hostvars['localhost']['ocp_ingress_fip'] }}"
+            - ip: "{{ hostvars['localhost']['rhv_ingress_fip'] }}"
               env_var: "INGRESS_FIP"
           loop_control:
             label: item.ip
-          when: openshift_fip_provision
-        
+          when: rhv_fip_provision
+
         - name: Add environment variable for DNS domain
           lineinfile:
             path: "/home/{{ student_name }}/.bashrc"
             regexp: "^export OPENSHIFT_DNS_ZONE"
-            line: "export OPENSHIFT_DNS_ZONE={{ ocp_cluster_dns_zone }}"
-          when: openshift_fip_provision
+            line: "export OPENSHIFT_DNS_ZONE={{ osp_cluster_dns_zone }}"
+          when: rhv_fip_provision
 
         - name: Add environment variable for OpenStack credentials
           lineinfile:
             path: "/home/{{ student_name }}/.bashrc"
             regexp: "^export OS_CLOUD"
-            line: "export OS_CLOUD={{ guid }}-project"
+            line: "export OS_CLOUD={% if osp_project_create %}{{ guid }}-project{% else %}{{ osp_project_name }}{% endif %}"
 
         - name: Create resources directory
           file:
@@ -86,7 +113,7 @@
             dest: "/home/{{ student_name }}/resources/update_ignition.py"
             src: "./files/update_ignition.py"
             owner: "{{ student_name }}"
-        
+
         - name: Add jinja for machinesets to resources directory
           copy:
             dest: "/home/{{ student_name }}/resources/general-ms.yaml.j2"
@@ -98,7 +125,7 @@
         #   command: |
         #     /usr/local/bin/openstack --os-cloud {{ osp_project_name }} container create ignition
         #   become_user: "{{ student_name }}"
-        
+
         # - name: Set ACL for ignition container
         #   command: |
         #     /usr/local/bin/swift post --read-acl ".r:*,.rlistings" ignition
